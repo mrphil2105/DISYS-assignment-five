@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package auctionSystem;
+
+option go_package = "github.com/mrphil2105/DISYS-assignment-five;auctionSystem";
+
+service ConnectService {
+    rpc JoinNetwork(PeerJoin) returns (ConnectedTo);
+}
+
+message PeerJoin {
+    string port = 1;
+    uint32 pid = 2;
+}
+
+message ConnectedTo {
+    uint32 pid = 1;
+}
+
+service AuctionService {
+    rpc SendBid(Bid) returns (BidAck);
+    rpc GetResult(Void) returns (Outcome);
+}
+
+message Bid {
+    uint32 amount = 1;
+}
+
+message BidAck {
+    bool success = 1;
+}
+
+message Outcome {
+    bool isOver = 1;
+    uint32 highestBid = 2;
+}
+
+service BullyService {
+    rpc SendElection(Election) returns (Void); // Start an election.
+    rpc SendAnswer(Answer) returns (Void); // To indicate that the node is still alive.
+    rpc SendCoordinator(Coordinator) returns (Void); // Used to declare as winner.
+}
+
+message Election {
+}
+
+message Answer {
+}
+
+message Coordinator {
+    uint32 pid = 1;
+}
+
+service FrontendService {
+    rpc SendBid(Bid) returns (BidAck);
+    rpc GetResult(Void) returns (Outcome);
+    rpc SetPrimaryNode(Coordinator) returns (Void); // Called by the winner after an election.
+}
+
+message Void {}
