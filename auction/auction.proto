@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package auctionSystem;
+
+option go_package = "github.com/mrphil2105/DISYS-assignment-five;auction";
+
+service AuctionService {
+    rpc SendBid(Bid) returns (BidAck);
+    rpc GetResult(Void) returns (Outcome);
+}
+
+message Bid {
+    uint32 amount = 1;
+}
+
+message BidAck {
+    bool success = 1;
+}
+
+message Outcome {
+    repeated uint32 bidders = 1; // Process ids of all bidders.
+    uint32 winner = 2; // The process id of the winner. 0 means no winner yet.
+    uint32 highestBid = 3;
+}
+
+service RingService {
+    rpc SendElection(Election) returns (Void); // An election is in progress.
+    rpc SendElected(Elected) returns (Void); // The winner is being announced.
+}
+
+message Election {
+    uint32 pid = 1;
+}
+
+message Elected {
+    uint32 pid = 1;
+}
+
+service FrontendService {
+    rpc SendBid(Bid) returns (BidAck);
+    rpc GetResult(Void) returns (Outcome);
+    rpc SetPrimaryNode(Elected) returns (Void); // Called by the winner after an election.
+}
+
+message Void {}
