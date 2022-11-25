@@ -18,6 +18,164 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
+// ConnectServiceClient is the client API for ConnectService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ConnectServiceClient interface {
+	FinishConnect(ctx context.Context, in *Void, opts ...grpc.CallOption) (*BackupDetails, error)
+	AddBackup(ctx context.Context, in *BackupJoin, opts ...grpc.CallOption) (*Void, error)
+	RemoveBackup(ctx context.Context, in *BackupLeave, opts ...grpc.CallOption) (*Void, error)
+}
+
+type connectServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewConnectServiceClient(cc grpc.ClientConnInterface) ConnectServiceClient {
+	return &connectServiceClient{cc}
+}
+
+func (c *connectServiceClient) FinishConnect(ctx context.Context, in *Void, opts ...grpc.CallOption) (*BackupDetails, error) {
+	out := new(BackupDetails)
+	err := c.cc.Invoke(ctx, "/auctionSystem.ConnectService/FinishConnect", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectServiceClient) AddBackup(ctx context.Context, in *BackupJoin, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/auctionSystem.ConnectService/AddBackup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectServiceClient) RemoveBackup(ctx context.Context, in *BackupLeave, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/auctionSystem.ConnectService/RemoveBackup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ConnectServiceServer is the server API for ConnectService service.
+// All implementations must embed UnimplementedConnectServiceServer
+// for forward compatibility
+type ConnectServiceServer interface {
+	FinishConnect(context.Context, *Void) (*BackupDetails, error)
+	AddBackup(context.Context, *BackupJoin) (*Void, error)
+	RemoveBackup(context.Context, *BackupLeave) (*Void, error)
+	mustEmbedUnimplementedConnectServiceServer()
+}
+
+// UnimplementedConnectServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedConnectServiceServer struct {
+}
+
+func (UnimplementedConnectServiceServer) FinishConnect(context.Context, *Void) (*BackupDetails, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FinishConnect not implemented")
+}
+func (UnimplementedConnectServiceServer) AddBackup(context.Context, *BackupJoin) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddBackup not implemented")
+}
+func (UnimplementedConnectServiceServer) RemoveBackup(context.Context, *BackupLeave) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveBackup not implemented")
+}
+func (UnimplementedConnectServiceServer) mustEmbedUnimplementedConnectServiceServer() {}
+
+// UnsafeConnectServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ConnectServiceServer will
+// result in compilation errors.
+type UnsafeConnectServiceServer interface {
+	mustEmbedUnimplementedConnectServiceServer()
+}
+
+func RegisterConnectServiceServer(s grpc.ServiceRegistrar, srv ConnectServiceServer) {
+	s.RegisterService(&ConnectService_ServiceDesc, srv)
+}
+
+func _ConnectService_FinishConnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectServiceServer).FinishConnect(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auctionSystem.ConnectService/FinishConnect",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectServiceServer).FinishConnect(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectService_AddBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackupJoin)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectServiceServer).AddBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auctionSystem.ConnectService/AddBackup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectServiceServer).AddBackup(ctx, req.(*BackupJoin))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectService_RemoveBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackupLeave)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectServiceServer).RemoveBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auctionSystem.ConnectService/RemoveBackup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectServiceServer).RemoveBackup(ctx, req.(*BackupLeave))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ConnectService_ServiceDesc is the grpc.ServiceDesc for ConnectService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ConnectService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "auctionSystem.ConnectService",
+	HandlerType: (*ConnectServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "FinishConnect",
+			Handler:    _ConnectService_FinishConnect_Handler,
+		},
+		{
+			MethodName: "AddBackup",
+			Handler:    _ConnectService_AddBackup_Handler,
+		},
+		{
+			MethodName: "RemoveBackup",
+			Handler:    _ConnectService_RemoveBackup_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "auction/auction.proto",
+}
+
 // AuctionServiceClient is the client API for AuctionService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
