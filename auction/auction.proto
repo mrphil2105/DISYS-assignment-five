@@ -54,6 +54,7 @@ message Election {
 
 message Elected {
     uint32 pid = 1;
+    string port = 2;
 }
 
 service FrontendService {
