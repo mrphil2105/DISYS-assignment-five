@@ -37,8 +37,8 @@ func main() {
 		// TODO: Add 'client()'
 	case "frontend":
 		log = lo.New(io.MultiWriter(os.Stdout, logFile), prefix, lo.Ltime)
-		// TODO: Add 'frontend()'
+		frontend()
 	default:
-		log.Fatalf("Invalid start value '%s'. Expected 'client', 'server' or 'frontend'.", *start)
+		log.Fatalf("Invalid start value '%s'. Expected 'client', 'server' or 'frontend'", *start)
 	}
 }
