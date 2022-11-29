@@ -180,6 +180,7 @@ var ConnectService_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuctionServiceClient interface {
+	AuctionStarted(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Void, error)
 	SendBid(ctx context.Context, in *Bid, opts ...grpc.CallOption) (*BidAck, error)
 	GetResult(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Outcome, error)
 }
@@ -190,6 +191,15 @@ type auctionServiceClient struct {
 
 func NewAuctionServiceClient(cc grpc.ClientConnInterface) AuctionServiceClient {
 	return &auctionServiceClient{cc}
+}
+
+func (c *auctionServiceClient) AuctionStarted(ctx context.Context, in *Void, opts ...grpc.CallOption) (*Void, error) {
+	out := new(Void)
+	err := c.cc.Invoke(ctx, "/auctionSystem.AuctionService/AuctionStarted", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *auctionServiceClient) SendBid(ctx context.Context, in *Bid, opts ...grpc.CallOption) (*BidAck, error) {
@@ -214,6 +224,7 @@ func (c *auctionServiceClient) GetResult(ctx context.Context, in *Void, opts ...
 // All implementations must embed UnimplementedAuctionServiceServer
 // for forward compatibility
 type AuctionServiceServer interface {
+	AuctionStarted(context.Context, *Void) (*Void, error)
 	SendBid(context.Context, *Bid) (*BidAck, error)
 	GetResult(context.Context, *Void) (*Outcome, error)
 	mustEmbedUnimplementedAuctionServiceServer()
@@ -223,6 +234,9 @@ type AuctionServiceServer interface {
 type UnimplementedAuctionServiceServer struct {
 }
 
+func (UnimplementedAuctionServiceServer) AuctionStarted(context.Context, *Void) (*Void, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuctionStarted not implemented")
+}
 func (UnimplementedAuctionServiceServer) SendBid(context.Context, *Bid) (*BidAck, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendBid not implemented")
 }
@@ -240,6 +254,24 @@ type UnsafeAuctionServiceServer interface {
 
 func RegisterAuctionServiceServer(s grpc.ServiceRegistrar, srv AuctionServiceServer) {
 	s.RegisterService(&AuctionService_ServiceDesc, srv)
+}
+
+func _AuctionService_AuctionStarted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuctionServiceServer).AuctionStarted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auctionSystem.AuctionService/AuctionStarted",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuctionServiceServer).AuctionStarted(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuctionService_SendBid_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -285,6 +317,10 @@ var AuctionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "auctionSystem.AuctionService",
 	HandlerType: (*AuctionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AuctionStarted",
+			Handler:    _AuctionService_AuctionStarted_Handler,
+		},
 		{
 			MethodName: "SendBid",
 			Handler:    _AuctionService_SendBid_Handler,
