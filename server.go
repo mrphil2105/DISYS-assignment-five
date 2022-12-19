@@ -11,16 +11,31 @@ import (
 	"strings"
 )
 
+type Bid struct {
+	pid    uint32
+	amount uint32
+}
+
 type Server struct {
 	auction.UnimplementedConnectServiceServer
-	pid     uint32
-	backups map[uint32]*Backup
+	pid         uint32
+	bids        map[uint32]*Bid
+	auctionDone bool
+	backups     map[uint32]*Backup
 }
 
 func NewServer() *Server {
 	return &Server{
 		pid:     uint32(os.Getpid()),
+		bids:    make(map[uint32]*Bid),
 		backups: make(map[uint32]*Backup),
+	}
+}
+
+func NewBid(pid uint32, amount uint32) *Bid {
+	return &Bid{
+		pid:    pid,
+		amount: amount,
 	}
 }
 
@@ -66,8 +81,8 @@ func server() {
 			InformNewBackup(server, connectClient)
 
 			backup := NewBackup(details.GetPid(), clientPort)
-			server.backups[details.GetPid()] = backup
 			backup.SetConnection(connectClient, auctionClient)
+			server.backups[details.GetPid()] = backup
 		case "kill":
 			os.Exit(0)
 		default:
