@@ -21,6 +21,7 @@ type Server struct {
 	pid         uint32
 	bids        map[uint32]*Bid
 	auctionDone bool
+	elected     uint32
 	backups     map[uint32]*Backup
 }
 

@@ -58,3 +58,15 @@ func (server *Server) RemoveBackup(ctx context.Context, backupLeave *auction.Bac
 
 	return &auction.Void{}, nil
 }
+
+// Called by gRPC
+func (server *Server) AuctionStarted(ctx context.Context, void *auction.Void) (*auction.Void, error) {
+	if server.pid == server.elected {
+		log.Fatalf("Received auction started message as main node.")
+	}
+
+	server.bids = make(map[uint32]*Bid)
+	server.auctionDone = false
+
+	return &auction.Void{}, nil
+}
