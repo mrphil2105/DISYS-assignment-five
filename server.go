@@ -75,6 +75,11 @@ func server() {
 
 		switch input[0] {
 		case "connect":
+			if len(server.backups) > 0 && server.elected != server.pid {
+				log.Printf("Adding a backup connection to a backup is not valid.")
+				continue
+			}
+
 			clientPort := input[1]
 			connectClient, auctionClient := server.ConnectBackupClient(clientPort)
 			details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
@@ -91,6 +96,7 @@ func server() {
 			backup := NewBackup(details.GetPid(), clientPort)
 			backupConn := NewBackupConnection(backup, connectClient, auctionClient)
 
+			server.elected = server.pid
 			server.backups[details.GetPid()] = backup
 			server.backupConns[details.GetPid()] = backupConn
 		case "kill":
