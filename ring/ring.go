@@ -5,8 +5,8 @@ type Ring interface {
 	GetState() State
 	SetState(state State)
 	SetElected(pid uint32)
-	SendElection(pid uint32)
-	SendElected(pid uint32)
+	Election(pid uint32)
+	Elected(pid uint32)
 }
 
 func Init(ring Ring) {
@@ -15,7 +15,7 @@ func Init(ring Ring) {
 }
 
 func CallElection(ring Ring) {
-	ring.SendElection(ring.GetPid())
+	ring.Election(ring.GetPid())
 }
 
 func ReceiveElected(ring Ring, otherPid uint32) {
@@ -24,7 +24,7 @@ func ReceiveElected(ring Ring, otherPid uint32) {
 	}
 
 	ring.SetElected(otherPid)
-	ring.SendElected(otherPid)
+	ring.Elected(otherPid)
 }
 
 func ReceiveElection(ring Ring, otherPid uint32) {
@@ -32,11 +32,11 @@ func ReceiveElection(ring Ring, otherPid uint32) {
 
 	if otherPid == pid {
 		ring.SetElected(pid)
-		ring.SendElected(pid)
+		ring.Elected(pid)
 	} else if otherPid > pid {
-		ring.SendElection(otherPid)
+		ring.Election(otherPid)
 	} else if ring.GetState() == NonParticipant {
-		ring.SendElection(pid)
+		ring.Election(pid)
 	}
 
 	ring.SetState(Participant)
