@@ -10,14 +10,7 @@ import (
 )
 
 func (*Server) ConnectBackupClient(port string) (auction.ConnectServiceClient, auction.AuctionServiceClient) {
-	log.Printf("Dialing node on port %s", port)
-
-	conn, err := grpc.Dial(net.JoinHostPort("localhost", port),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-
-	if err != nil {
-		log.Fatalf("Failed to dial node: %v", err)
-	}
+	conn := ConnectClient("backup node", port)
 
 	connectClient := auction.NewConnectServiceClient(conn)
 	auctionClient := auction.NewAuctionServiceClient(conn)
@@ -26,29 +19,28 @@ func (*Server) ConnectBackupClient(port string) (auction.ConnectServiceClient, a
 }
 
 func (*Server) ConnectRingClient(port string) auction.RingServiceClient {
-	log.Printf("Dialing ring node on port %s", port)
-
-	conn, err := grpc.Dial(net.JoinHostPort("localhost", port),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-
-	if err != nil {
-		log.Fatalf("Failed to dial ring node: %v", err)
-	}
+	conn := ConnectClient("ring node", port)
 
 	return auction.NewRingServiceClient(conn)
 }
 
 func (*Frontend) ConnectServerClient(port string) auction.AuctionServiceClient {
-	log.Printf("Dialing server on port %s", port)
+	conn := ConnectClient("server", port)
+
+	return auction.NewAuctionServiceClient(conn)
+}
+
+func ConnectClient(name string, port string) *grpc.ClientConn {
+	log.Printf("Dialing %s on port %s", name, port)
 
 	conn, err := grpc.Dial(net.JoinHostPort("localhost", port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
-		log.Fatalf("Failed to dial server: %v", err)
+		log.Fatalf("Failed to dial frontend: %v", err)
 	}
 
-	return auction.NewAuctionServiceClient(conn)
+	return conn
 }
 
 func ParsePort(portStr string) uint16 {
