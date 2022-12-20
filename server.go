@@ -128,3 +128,35 @@ func InformNewBackup(server *Server, connectClient auction.ConnectServiceClient)
 		}
 	}
 }
+
+func (server *Server) GetRingNeighbor() *Backup {
+	backupsByPort := make(map[uint16]*Backup)
+	var lowestPort uint16 = 0xFFFF
+	var highestPort uint16
+
+	for _, backup := range server.backups {
+		backupPort := ParsePort(backup.port)
+		backupsByPort[backupPort] = backup
+
+		if backupPort < lowestPort {
+			lowestPort = backupPort
+		}
+
+		if backupPort > highestPort {
+			highestPort = backupPort
+		}
+	}
+
+	port := ParsePort(*port) + 1
+
+	if port > highestPort {
+		port = lowestPort
+	}
+
+	return backupsByPort[port]
+}
+
+func (server *Server) ConnectToRingNeighbor() {
+	server.neighbor = server.GetRingNeighbor()
+	server.neighborClient = server.ConnectRingClient(server.neighbor.port)
+}

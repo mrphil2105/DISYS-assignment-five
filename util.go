@@ -3,6 +3,7 @@ package main
 import (
 	"main/auction"
 	"net"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,4 +49,14 @@ func (*Frontend) ConnectServerClient(port string) auction.AuctionServiceClient {
 	}
 
 	return auction.NewAuctionServiceClient(conn)
+}
+
+func ParsePort(portStr string) uint16 {
+	parsed, err := strconv.ParseUint(portStr, 10, 16)
+
+	if err != nil {
+		log.Fatalf("Failed to parse '%s' as port: %v", portStr, err)
+	}
+
+	return uint16(parsed)
 }
