@@ -30,6 +30,12 @@ func (*Frontend) ConnectServerClient(port string) auction.AuctionServiceClient {
 	return auction.NewAuctionServiceClient(conn)
 }
 
+func (*Client) ConnectFrontendClient() auction.FrontendServiceClient {
+	conn := ConnectClient("frontend", frontendPort)
+
+	return auction.NewFrontendServiceClient(conn)
+}
+
 func ConnectClient(name string, port string) *grpc.ClientConn {
 	log.Printf("Dialing %s on port %s", name, port)
 
