@@ -7,8 +7,12 @@ import (
 )
 
 type Backup struct {
-	pid           uint32
-	port          string
+	pid  uint32
+	port string
+}
+
+type BackupConnection struct {
+	backup        *Backup
 	connectClient auction.ConnectServiceClient
 	auctionClient auction.AuctionServiceClient
 }
@@ -20,16 +24,14 @@ func NewBackup(pid uint32, port string) *Backup {
 	}
 }
 
-func (backup *Backup) SetConnection(connectClient auction.ConnectServiceClient,
-	auctionClient auction.AuctionServiceClient) {
+func NewBackupConnection(backup *Backup, connectClient auction.ConnectServiceClient,
+	auctionClient auction.AuctionServiceClient) *BackupConnection {
 
-	backup.connectClient = connectClient
-	backup.auctionClient = auctionClient
-}
-
-func (backup *Backup) ClearConnection() {
-	backup.connectClient = nil
-	backup.auctionClient = nil
+	return &BackupConnection{
+		backup:        backup,
+		connectClient: connectClient,
+		auctionClient: auctionClient,
+	}
 }
 
 // Called by gRPC

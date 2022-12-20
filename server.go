@@ -23,13 +23,15 @@ type Server struct {
 	auctionDone bool
 	elected     uint32
 	backups     map[uint32]*Backup
+	backupConns map[uint32]*BackupConnection
 }
 
 func NewServer() *Server {
 	return &Server{
-		pid:     uint32(os.Getpid()),
-		bids:    make(map[uint32]*Bid),
-		backups: make(map[uint32]*Backup),
+		pid:         uint32(os.Getpid()),
+		bids:        make(map[uint32]*Bid),
+		backups:     make(map[uint32]*Backup),
+		backupConns: make(map[uint32]*BackupConnection),
 	}
 }
 
@@ -82,8 +84,10 @@ func server() {
 			InformNewBackup(server, connectClient)
 
 			backup := NewBackup(details.GetPid(), clientPort)
-			backup.SetConnection(connectClient, auctionClient)
+			backupConn := NewBackupConnection(backup, connectClient, auctionClient)
+
 			server.backups[details.GetPid()] = backup
+			server.backupConns[details.GetPid()] = backupConn
 		case "kill":
 			os.Exit(0)
 		default:
@@ -94,14 +98,14 @@ func server() {
 
 func InformExistingBackups(server *Server, newPid uint32, newPort string) {
 	// Inform existing backups about the new backup.
-	for pid, backup := range server.backups {
-		_, err := backup.connectClient.AddBackup(context.Background(), &auction.BackupJoin{
+	for pid, backupConn := range server.backupConns {
+		_, err := backupConn.connectClient.AddBackup(context.Background(), &auction.BackupJoin{
 			Pid:  newPid,
 			Port: newPort,
 		})
 
 		if err != nil {
-			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", pid, backup.port)
+			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", pid, backupConn.backup.port)
 		}
 	}
 }
