@@ -9,6 +9,7 @@ import (
 	"main/ring"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -48,10 +49,10 @@ func NewBid(pid uint32, amount uint32) *Bid {
 }
 
 func server() {
-	listener, err := net.Listen("tcp", net.JoinHostPort("localhost", *port))
+	listener, err := net.Listen("tcp", net.JoinHostPort("localhost", port))
 
 	if err != nil {
-		log.Fatalf("Unable to listen on port %s: %v", *port, err)
+		log.Fatalf("Unable to listen on port %s: %v", port, err)
 	}
 
 	defer listener.Close()
@@ -61,7 +62,7 @@ func server() {
 	go func() {
 		grpcServer := grpc.NewServer()
 		auction.RegisterConnectServiceServer(grpcServer, server)
-		log.Printf("Created gRPC server on port %s", *port)
+		log.Printf("Created gRPC server on port %s", port)
 
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Stopped serving due to error: %v", err)
@@ -80,7 +81,7 @@ func server() {
 				continue
 			}
 
-			clientPort := input[1]
+			clientPort := strconv.Itoa(int(countingPort + ParsePort(input[1])))
 			connectClient, auctionClient := server.ConnectBackupClient(clientPort)
 			details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
 
@@ -153,7 +154,7 @@ func (server *Server) GetRingNeighbor() *Backup {
 		}
 	}
 
-	port := ParsePort(*port) + 1
+	port := ParsePort(port) + 1
 
 	if port > highestPort {
 		port = lowestPort

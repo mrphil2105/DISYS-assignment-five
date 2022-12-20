@@ -6,13 +6,16 @@ import (
 	"io"
 	lo "log"
 	"os"
+	"strconv"
 )
 
 var (
 	start = flag.String("start", "server",
 		"Entrypoint for the application. Either client, server or frontend")
 	name         = flag.String("name", "NoName", "Name of the instance")
-	port         = flag.String("port", "50060", "Port to listen on")
+	node         = flag.String("node", "0", "A number to assign the node. Used to determine port")
+	countingPort = uint16(50051)
+	port         = strconv.Itoa(int(countingPort + ParsePort(*node)))
 	frontendPort = "50050"
 	log          = lo.Default()
 )
