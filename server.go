@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"main/auction"
+	"main/ring"
 	"net"
 	"os"
 	"strings"
@@ -18,12 +19,16 @@ type Bid struct {
 
 type Server struct {
 	auction.UnimplementedConnectServiceServer
-	pid         uint32
-	bids        map[uint32]*Bid
-	auctionDone bool
-	elected     uint32
-	backups     map[uint32]*Backup
-	backupConns map[uint32]*BackupConnection
+	auction.UnimplementedRingServiceServer
+	pid            uint32
+	bids           map[uint32]*Bid
+	auctionDone    bool
+	state          ring.State
+	elected        uint32
+	neighbor       *Backup
+	neighborClient auction.RingServiceClient
+	backups        map[uint32]*Backup
+	backupConns    map[uint32]*BackupConnection
 }
 
 func NewServer() *Server {
