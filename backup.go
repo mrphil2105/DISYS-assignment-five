@@ -11,7 +11,7 @@ type Backup struct {
 	port string
 }
 
-type BackupConnection struct {
+type BackupConn struct {
 	backup        *Backup
 	connectClient auction.ConnectServiceClient
 	auctionClient auction.AuctionServiceClient
@@ -24,10 +24,10 @@ func NewBackup(pid uint32, port string) *Backup {
 	}
 }
 
-func NewBackupConnection(backup *Backup, connectClient auction.ConnectServiceClient,
-	auctionClient auction.AuctionServiceClient) *BackupConnection {
+func NewBackupConn(backup *Backup, connectClient auction.ConnectServiceClient,
+	auctionClient auction.AuctionServiceClient) *BackupConn {
 
-	return &BackupConnection{
+	return &BackupConn{
 		backup:        backup,
 		connectClient: connectClient,
 		auctionClient: auctionClient,

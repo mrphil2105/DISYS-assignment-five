@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-type ServerConnection struct {
+type ServerConn struct {
 	pid    uint32
 	port   string
 	client auction.AuctionServiceClient
@@ -15,15 +15,15 @@ type ServerConnection struct {
 
 type Frontend struct {
 	auction.UnimplementedFrontendServiceServer
-	server *ServerConnection
+	server *ServerConn
 }
 
 func NewFrontend() *Frontend {
 	return &Frontend{}
 }
 
-func NewServerConnection(pid uint32, port string, client auction.AuctionServiceClient) *ServerConnection {
-	return &ServerConnection{
+func NewServerConn(pid uint32, port string, client auction.AuctionServiceClient) *ServerConn {
+	return &ServerConn{
 		pid:    pid,
 		port:   port,
 		client: client,
@@ -85,12 +85,12 @@ func (frontend *Frontend) SetPrimaryNode(ctx context.Context, elected *auction.E
 	log.Printf("Setting main server to pid %d, port %s", pid, port)
 
 	client := frontend.ConnectServerClient(port)
-	frontend.server = NewServerConnection(pid, port, client)
+	frontend.server = NewServerConn(pid, port, client)
 
 	return &auction.Void{}, nil
 }
 
-func (frontend *Frontend) GetServer() *ServerConnection {
+func (frontend *Frontend) GetServer() *ServerConn {
 	if server := frontend.server; server != nil {
 		return server
 	}

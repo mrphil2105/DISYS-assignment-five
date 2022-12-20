@@ -28,7 +28,7 @@ type Server struct {
 	neighbor       *Backup
 	neighborClient auction.RingServiceClient
 	backups        map[uint32]*Backup
-	backupConns    map[uint32]*BackupConnection
+	backupConns    map[uint32]*BackupConn
 }
 
 func NewServer() *Server {
@@ -36,7 +36,7 @@ func NewServer() *Server {
 		pid:         uint32(os.Getpid()),
 		bids:        make(map[uint32]*Bid),
 		backups:     make(map[uint32]*Backup),
-		backupConns: make(map[uint32]*BackupConnection),
+		backupConns: make(map[uint32]*BackupConn),
 	}
 }
 
@@ -94,7 +94,7 @@ func server() {
 			InformNewBackup(server, connectClient)
 
 			backup := NewBackup(details.GetPid(), clientPort)
-			backupConn := NewBackupConnection(backup, connectClient, auctionClient)
+			backupConn := NewBackupConn(backup, connectClient, auctionClient)
 
 			server.elected = server.pid
 			server.backups[details.GetPid()] = backup
