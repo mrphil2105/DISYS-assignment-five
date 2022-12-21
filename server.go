@@ -20,6 +20,7 @@ type Bid struct {
 
 type Server struct {
 	auction.UnimplementedConnectServiceServer
+	auction.UnimplementedAuctionServiceServer
 	auction.UnimplementedRingServiceServer
 	pid            uint32
 	bids           map[uint32]*Bid
@@ -62,6 +63,7 @@ func server() {
 	go func() {
 		grpcServer := grpc.NewServer()
 		auction.RegisterConnectServiceServer(grpcServer, server)
+		auction.RegisterAuctionServiceServer(grpcServer, server)
 		log.Printf("Created gRPC server on port %s", port)
 
 		if err := grpcServer.Serve(listener); err != nil {
