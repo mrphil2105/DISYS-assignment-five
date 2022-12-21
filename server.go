@@ -77,7 +77,7 @@ func server() {
 		switch input[0] {
 		case "connect":
 			if len(server.backups) > 0 && server.elected != server.pid {
-				log.Printf("Adding a backup connection to a backup is not valid.")
+				log.Printf("Adding a backup connection to a backup is not valid")
 				continue
 			}
 

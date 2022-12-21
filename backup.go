@@ -36,6 +36,8 @@ func NewBackupConn(backup *Backup, connectClient auction.ConnectServiceClient,
 
 // Called by gRPC
 func (*Server) FinishConnect(ctx context.Context, void *auction.Void) (*auction.BackupDetails, error) {
+	log.Printf("Sending backup details (pid %d) to main node", os.Getpid())
+
 	return &auction.BackupDetails{Pid: uint32(os.Getpid())}, nil
 }
 
@@ -64,7 +66,7 @@ func (server *Server) RemoveBackup(ctx context.Context, backupLeave *auction.Bac
 // Called by gRPC
 func (server *Server) AuctionStarted(ctx context.Context, void *auction.Void) (*auction.Void, error) {
 	if server.pid == server.elected {
-		log.Fatalf("Received auction started message as main node.")
+		log.Fatalf("Received auction started message as main node")
 	}
 
 	server.bids = make(map[uint32]*Bid)
