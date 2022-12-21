@@ -99,7 +99,7 @@ func server() {
 			backup := NewBackup(details.GetPid(), clientPort)
 			backupConn := NewBackupConn(backup, connectClient, auctionClient)
 
-			server.elected = server.pid
+			server.SetAsMain()
 			server.backups[details.GetPid()] = backup
 			server.backupConns[details.GetPid()] = backupConn
 		case "kill":
@@ -134,6 +134,28 @@ func InformNewBackup(server *Server, connectClient auction.ConnectServiceClient)
 
 		if err != nil {
 			log.Fatalf("Failed to inform new backup about backup (pid %d, port %s)", pid, backup.port)
+		}
+	}
+}
+
+func (server *Server) SetAsMain() {
+	if server.elected != server.pid {
+		log.Printf("Setting server as main node")
+		server.elected = server.pid
+
+		conn := ConnectClient("frontend", frontendPort)
+		defer conn.Close()
+
+		frontendClient := auction.NewFrontendServiceClient(conn)
+
+		elected := &auction.Elected{
+			Pid:  server.pid,
+			Port: port,
+		}
+		_, err := frontendClient.SetPrimaryNode(context.Background(), elected)
+
+		if err != nil {
+			log.Fatalf("Unable to inform frontend about main node")
 		}
 	}
 }
