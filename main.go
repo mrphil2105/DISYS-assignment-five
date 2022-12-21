@@ -32,15 +32,14 @@ func main() {
 		log.Fatalf("Unable to open or create file %s: %v", logFileName, err)
 	}
 
+	log = lo.New(io.MultiWriter(os.Stdout, logFile), prefix, lo.Ltime)
+
 	switch *start {
 	case "server":
-		log = lo.New(io.MultiWriter(os.Stdout, logFile), prefix, lo.Ltime)
 		server()
 	case "client":
-		log = lo.New(logFile, prefix, lo.Ltime)
-		// TODO: Add 'client()'
+		client()
 	case "frontend":
-		log = lo.New(io.MultiWriter(os.Stdout, logFile), prefix, lo.Ltime)
 		frontend()
 	default:
 		log.Fatalf("Invalid start value '%s'. Expected 'client', 'server' or 'frontend'", *start)
