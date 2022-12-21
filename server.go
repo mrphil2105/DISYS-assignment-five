@@ -78,40 +78,44 @@ func server() {
 
 		switch input[0] {
 		case "connect":
-			if len(server.backups) > 0 && server.elected != server.pid {
-				log.Printf("Adding a backup connection to a backup is not valid")
-				continue
-			}
-
-			port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
-			conn := ConnectClient("backup node", port)
-
-			connectClient := auction.NewConnectServiceClient(conn)
-			auctionClient := auction.NewAuctionServiceClient(conn)
-
-			details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
-
-			if err != nil {
-				log.Fatalf("Failed to get backup details from %s: %v", port, err)
-			}
-
-			log.Printf("Informing backups about new backup (pid %d, port %s)", details.GetPid(), port)
-
-			InformExistingBackups(server, details.GetPid(), port)
-			InformNewBackup(server, connectClient)
-
-			backup := NewBackup(details.GetPid(), port)
-			backupConn := NewBackupConn(backup, connectClient, auctionClient)
-
-			server.SetAsMain()
-			server.backups[details.GetPid()] = backup
-			server.backupConns[details.GetPid()] = backupConn
+			ConnectToBackup(server, input)
 		case "kill":
 			os.Exit(0)
 		default:
 			fmt.Printf("Unknown command '%s'\n", input[0])
 		}
 	}
+}
+
+func ConnectToBackup(server *Server, input []string) {
+	if len(server.backups) > 0 && server.elected != server.pid {
+		log.Printf("Adding a backup connection to a backup is not valid")
+		return
+	}
+
+	port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
+	conn := ConnectClient("backup node", port)
+
+	connectClient := auction.NewConnectServiceClient(conn)
+	auctionClient := auction.NewAuctionServiceClient(conn)
+
+	details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
+
+	if err != nil {
+		log.Fatalf("Failed to get backup details from %s: %v", port, err)
+	}
+
+	log.Printf("Informing backups about new backup (pid %d, port %s)", details.GetPid(), port)
+
+	InformExistingBackups(server, details.GetPid(), port)
+	InformNewBackup(server, connectClient)
+
+	backup := NewBackup(details.GetPid(), port)
+	backupConn := NewBackupConn(backup, connectClient, auctionClient)
+
+	server.SetAsMain()
+	server.backups[details.GetPid()] = backup
+	server.backupConns[details.GetPid()] = backupConn
 }
 
 func InformExistingBackups(server *Server, newPid uint32, newPort string) {
