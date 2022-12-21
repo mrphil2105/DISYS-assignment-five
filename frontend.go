@@ -84,7 +84,8 @@ func (frontend *Frontend) SetPrimaryNode(ctx context.Context, elected *auction.E
 	port := elected.GetPort()
 	log.Printf("Setting main server to pid %d, port %s", pid, port)
 
-	client := frontend.ConnectServerClient(port)
+	conn := ConnectClient("server", port)
+	client := auction.NewAuctionServiceClient(conn)
 	frontend.server = NewServerConn(pid, port, client)
 
 	return &auction.Void{}, nil

@@ -83,20 +83,24 @@ func server() {
 				continue
 			}
 
-			clientPort := strconv.Itoa(int(countingPort + ParsePort(input[1])))
-			connectClient, auctionClient := server.ConnectBackupClient(clientPort)
+			port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
+			conn := ConnectClient("backup node", port)
+
+			connectClient := auction.NewConnectServiceClient(conn)
+			auctionClient := auction.NewAuctionServiceClient(conn)
+
 			details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
 
 			if err != nil {
-				log.Fatalf("Failed to get backup details from %s: %v", clientPort, err)
+				log.Fatalf("Failed to get backup details from %s: %v", port, err)
 			}
 
-			log.Printf("Informing backups about new backup (pid %d, port %s)", details.GetPid(), clientPort)
+			log.Printf("Informing backups about new backup (pid %d, port %s)", details.GetPid(), port)
 
-			InformExistingBackups(server, details.GetPid(), clientPort)
+			InformExistingBackups(server, details.GetPid(), port)
 			InformNewBackup(server, connectClient)
 
-			backup := NewBackup(details.GetPid(), clientPort)
+			backup := NewBackup(details.GetPid(), port)
 			backupConn := NewBackupConn(backup, connectClient, auctionClient)
 
 			server.SetAsMain()
@@ -188,6 +192,7 @@ func (server *Server) GetRingNeighbor() *Backup {
 }
 
 func (server *Server) ConnectToRingNeighbor() {
+	conn := ConnectClient("ring node", port)
 	server.neighbor = server.GetRingNeighbor()
-	server.neighborClient = server.ConnectRingClient(server.neighbor.port)
+	server.neighborClient = auction.NewRingServiceClient(conn)
 }

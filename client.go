@@ -22,8 +22,9 @@ func NewClient() *Client {
 }
 
 func client() {
+	conn := ConnectClient("frontend", frontendPort)
 	client := NewClient()
-	client.frontendClient = client.ConnectFrontendClient()
+	client.frontendClient = auction.NewFrontendServiceClient(conn)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
