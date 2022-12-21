@@ -8,14 +8,12 @@ import (
 // Called by gRPC
 func (server *Server) SendBid(ctx context.Context, bidMsg *auction.Bid) (*auction.BidAck, error) {
 	pid := bidMsg.GetPid()
-	amount := bidMsg.GetPid()
+	amount := bidMsg.GetAmount()
 
-	if bid, found := server.bids[pid]; found {
-		if bid.amount <= amount {
+	for _, bid := range server.bids {
+		if bid.amount >= amount {
 			return &auction.BidAck{Success: false}, nil
 		}
-
-		server.bids[pid] = bid
 	}
 
 	server.bids[pid] = NewBid(pid, amount)
