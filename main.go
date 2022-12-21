@@ -15,13 +15,14 @@ var (
 	name         = flag.String("name", "NoName", "Name of the instance")
 	node         = flag.String("node", "0", "A number to assign the node. Used to determine port")
 	countingPort = uint16(50051)
-	port         = strconv.Itoa(int(countingPort + ParsePort(*node)))
+	port         = ""
 	frontendPort = "50050"
 	log          = lo.Default()
 )
 
 func main() {
 	flag.Parse()
+	port = strconv.Itoa(int(countingPort + ParsePort(*node)))
 
 	prefix := fmt.Sprintf("%-8s: ", *name)
 	logFileName := fmt.Sprintf("%s.log", *name)
