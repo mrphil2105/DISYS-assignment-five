@@ -27,6 +27,7 @@ service AuctionService {
     rpc AuctionStarted(Void) returns (Void); // Used by main node to indicate auction start.
     rpc SendBid(Bid) returns (BidAck);
     rpc GetResult(Void) returns (Outcome);
+    rpc Ping(Void) returns (Void);
 }
 
 message Bid {
