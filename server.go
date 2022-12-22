@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Bid struct {
@@ -166,6 +167,39 @@ func (server *Server) SetAsMain() {
 			log.Fatalf("Unable to inform frontend about main node")
 		}
 	}
+}
+
+func (server *Server) StartHeartbeat() {
+	if server.elected != server.pid {
+		log.Fatalf("Unable to start heartbeat on a backup server")
+	}
+
+	go func() {
+		for {
+			time.Sleep(time.Second)
+
+			func() {
+				// TODO: Create GetBackups and GetBackupConns methods that return copies and use a lock.
+
+				for _, backupConn := range server.backupConns {
+					_, err := backupConn.auctionClient.Ping(context.Background(), &auction.Void{})
+
+					if err != nil {
+						pid := backupConn.backup.pid
+						port := backupConn.backup.port
+
+						log.Printf("Unable to send ping to backup (pid %d, port %s): %v", pid, port, err)
+						log.Printf("Removing backup (pid %d, port %s)", pid, port)
+
+						delete(server.backups, pid)
+						delete(server.backupConns, pid)
+
+						// TODO: Close connection here just to make sure.
+					}
+				}
+			}()
+		}
+	}()
 }
 
 func (server *Server) GetRingNeighbor() *Backup {
