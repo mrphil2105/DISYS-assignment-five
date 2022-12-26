@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -31,15 +32,14 @@ type Server struct {
 	neighbor       *Backup
 	neighborClient auction.RingServiceClient
 	backups        map[uint32]*Backup
-	backupConns    map[uint32]*BackupConn
+	backupsMutex   sync.Mutex
 }
 
 func NewServer() *Server {
 	return &Server{
-		pid:         uint32(os.Getpid()),
-		bids:        make(map[uint32]*Bid),
-		backups:     make(map[uint32]*Backup),
-		backupConns: make(map[uint32]*BackupConn),
+		pid:     uint32(os.Getpid()),
+		bids:    make(map[uint32]*Bid),
+		backups: make(map[uint32]*Backup),
 	}
 }
 
@@ -48,6 +48,47 @@ func NewBid(pid uint32, amount uint32) *Bid {
 		pid:    pid,
 		amount: amount,
 	}
+}
+
+func (server *Server) GetBackups() map[uint32]*Backup {
+	backups := make(map[uint32]*Backup)
+
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	for pid, backup := range server.backups {
+		backups[pid] = backup
+	}
+
+	return backups
+}
+
+func (server *Server) GetBackup(pid uint32) *Backup {
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	return server.backups[pid]
+}
+
+func (server *Server) GetBackupCount() int {
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	return len(server.backups)
+}
+
+func (server *Server) SetBackup(backup *Backup) {
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	server.backups[backup.pid] = backup
+}
+
+func (server *Server) DeleteBackup(pid uint32) {
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	delete(server.backups, pid)
 }
 
 func server() {
@@ -89,7 +130,7 @@ func server() {
 }
 
 func ConnectToBackup(server *Server, input []string) {
-	if len(server.backups) > 0 && server.elected != server.pid {
+	if server.GetBackupCount() > 0 && server.elected != server.pid {
 		log.Printf("Adding a backup connection to a backup is not valid")
 		return
 	}
@@ -111,31 +152,28 @@ func ConnectToBackup(server *Server, input []string) {
 	InformExistingBackups(server, details.GetPid(), port)
 	InformNewBackup(server, connectClient)
 
-	backup := NewBackup(details.GetPid(), port)
-	backupConn := NewBackupConn(backup, connectClient, auctionClient)
-
+	backup := NewBackup(details.GetPid(), port, connectClient, auctionClient)
 	server.SetAsMain()
-	server.backups[details.GetPid()] = backup
-	server.backupConns[details.GetPid()] = backupConn
+	server.SetBackup(backup)
 }
 
 func InformExistingBackups(server *Server, newPid uint32, newPort string) {
 	// Inform existing backups about the new backup.
-	for pid, backupConn := range server.backupConns {
-		_, err := backupConn.connectClient.AddBackup(context.Background(), &auction.BackupJoin{
+	for pid, backup := range server.GetBackups() {
+		_, err := backup.connectClient.AddBackup(context.Background(), &auction.BackupJoin{
 			Pid:  newPid,
 			Port: newPort,
 		})
 
 		if err != nil {
-			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", pid, backupConn.backup.port)
+			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", pid, backup.port)
 		}
 	}
 }
 
 func InformNewBackup(server *Server, connectClient auction.ConnectServiceClient) {
 	// Inform the new backup about existing backups.
-	for pid, backup := range server.backups {
+	for pid, backup := range server.GetBackups() {
 		_, err := connectClient.AddBackup(context.Background(), &auction.BackupJoin{
 			Pid:  pid,
 			Port: backup.port,
@@ -179,20 +217,20 @@ func (server *Server) StartHeartbeat() {
 			time.Sleep(time.Second)
 
 			func() {
-				// TODO: Create GetBackups and GetBackupConns methods that return copies and use a lock.
+				server.backupsMutex.Lock()
+				defer server.backupsMutex.Unlock()
 
-				for _, backupConn := range server.backupConns {
-					_, err := backupConn.auctionClient.Ping(context.Background(), &auction.Void{})
+				for _, backup := range server.backups {
+					_, err := backup.auctionClient.Ping(context.Background(), &auction.Void{})
 
 					if err != nil {
-						pid := backupConn.backup.pid
-						port := backupConn.backup.port
+						pid := backup.pid
+						port := backup.port
 
 						log.Printf("Unable to send ping to backup (pid %d, port %s): %v", pid, port, err)
 						log.Printf("Removing backup (pid %d, port %s)", pid, port)
 
 						delete(server.backups, pid)
-						delete(server.backupConns, pid)
 
 						// TODO: Close connection here just to make sure.
 					}
@@ -207,7 +245,7 @@ func (server *Server) GetRingNeighbor() *Backup {
 	var lowestPort uint16 = 0xFFFF
 	var highestPort uint16
 
-	for _, backup := range server.backups {
+	for _, backup := range server.GetBackups() {
 		backupPort := ParsePort(backup.port)
 		backupsByPort[backupPort] = backup
 

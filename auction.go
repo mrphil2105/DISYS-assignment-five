@@ -21,13 +21,12 @@ func (server *Server) SendBid(ctx context.Context, bidMsg *auction.Bid) (*auctio
 
 	// Send to backups if we are the main node.
 	if server.elected == server.pid {
-		for _, backupConn := range server.backupConns {
-			log.Printf("Sending bid to backup (pid %d, port %s)", backupConn.backup.pid, backupConn.backup.port)
-			_, err := backupConn.auctionClient.SendBid(context.Background(), bidMsg)
+		for _, backup := range server.GetBackups() {
+			log.Printf("Sending bid to backup (pid %d, port %s)", backup.pid, backup.port)
+			_, err := backup.auctionClient.SendBid(context.Background(), bidMsg)
 
 			if err != nil {
-				log.Printf("Failed to send bid to backup (pid %d, port %s)", backupConn.backup.pid,
-					backupConn.backup.port)
+				log.Printf("Failed to send bid to backup (pid %d, port %s)", backup.pid, backup.port)
 			}
 		}
 	}

@@ -7,28 +7,18 @@ import (
 )
 
 type Backup struct {
-	pid  uint32
-	port string
-}
-
-type BackupConn struct {
-	backup        *Backup
+	pid           uint32
+	port          string
 	connectClient auction.ConnectServiceClient
 	auctionClient auction.AuctionServiceClient
 }
 
-func NewBackup(pid uint32, port string) *Backup {
+func NewBackup(pid uint32, port string, connectClient auction.ConnectServiceClient,
+	auctionClient auction.AuctionServiceClient) *Backup {
+
 	return &Backup{
-		pid:  pid,
-		port: port,
-	}
-}
-
-func NewBackupConn(backup *Backup, connectClient auction.ConnectServiceClient,
-	auctionClient auction.AuctionServiceClient) *BackupConn {
-
-	return &BackupConn{
-		backup:        backup,
+		pid:           pid,
+		port:          port,
 		connectClient: connectClient,
 		auctionClient: auctionClient,
 	}
@@ -45,7 +35,9 @@ func (*Server) FinishConnect(ctx context.Context, void *auction.Void) (*auction.
 func (server *Server) AddBackup(ctx context.Context, backupJoin *auction.BackupJoin) (*auction.Void, error) {
 	pid := backupJoin.GetPid()
 	port := backupJoin.GetPort()
-	server.backups[pid] = NewBackup(pid, port)
+
+	backup := NewBackup(pid, port, nil, nil)
+	server.SetBackup(backup)
 
 	log.Printf("Received information about a backup (pid %d, port %s)", pid, port)
 
@@ -55,8 +47,8 @@ func (server *Server) AddBackup(ctx context.Context, backupJoin *auction.BackupJ
 // Called by gRPC
 func (server *Server) RemoveBackup(ctx context.Context, backupLeave *auction.BackupLeave) (*auction.Void, error) {
 	pid := backupLeave.GetPid()
-	backup := server.backups[pid]
-	delete(server.backups, pid)
+	backup := server.GetBackup(pid)
+	server.DeleteBackup(pid)
 
 	log.Printf("Received information that a backup (pid %d, port %s) was removed", pid, backup.port)
 
