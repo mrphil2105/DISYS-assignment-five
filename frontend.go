@@ -69,9 +69,9 @@ func (frontend *Frontend) GetResult(ctx context.Context, void *auction.Void) (*a
 }
 
 // Called by gRPC
-func (frontend *Frontend) SetPrimaryNode(ctx context.Context, elected *auction.Elected) (*auction.Void, error) {
-	pid := elected.GetPid()
-	port := elected.GetPort()
+func (frontend *Frontend) SetPrimaryNode(ctx context.Context, primaryNode *auction.PrimaryNode) (*auction.Void, error) {
+	pid := primaryNode.GetPid()
+	port := primaryNode.GetPort()
 	log.Printf("Setting main server to pid %d, port %s", pid, port)
 
 	conn := ConnectClient("server", port)

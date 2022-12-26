@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"main/auction"
-	"main/ring"
 	"net"
 	"os"
 	"strconv"
@@ -23,16 +22,12 @@ type Bid struct {
 type Server struct {
 	auction.UnimplementedConnectServiceServer
 	auction.UnimplementedAuctionServiceServer
-	auction.UnimplementedRingServiceServer
-	pid            uint32
-	bids           map[uint32]*Bid
-	auctionDone    bool
-	state          ring.State
-	elected        uint32
-	neighbor       *Backup
-	neighborClient auction.RingServiceClient
-	backups        map[uint32]*Backup
-	backupsMutex   sync.Mutex
+	pid          uint32
+	bids         map[uint32]*Bid
+	auctionDone  bool
+	isMain       bool
+	backups      map[uint32]*Backup
+	backupsMutex sync.Mutex
 }
 
 func NewServer() *Server {
@@ -130,7 +125,7 @@ func server() {
 }
 
 func ConnectToBackup(server *Server, input []string) {
-	if server.GetBackupCount() > 0 && server.elected != server.pid {
+	if server.GetBackupCount() > 0 && !server.isMain {
 		log.Printf("Adding a backup connection to a backup is not valid")
 		return
 	}
@@ -186,20 +181,20 @@ func InformNewBackup(server *Server, connectClient auction.ConnectServiceClient)
 }
 
 func (server *Server) SetAsMain() {
-	if server.elected != server.pid {
+	if !server.isMain {
 		log.Printf("Setting server as main node")
-		server.elected = server.pid
+		server.isMain = true
 
 		conn := ConnectClient("frontend", frontendPort)
 		defer conn.Close()
 
 		frontendClient := auction.NewFrontendServiceClient(conn)
 
-		elected := &auction.Elected{
+		primaryNode := &auction.PrimaryNode{
 			Pid:  server.pid,
 			Port: port,
 		}
-		_, err := frontendClient.SetPrimaryNode(context.Background(), elected)
+		_, err := frontendClient.SetPrimaryNode(context.Background(), primaryNode)
 
 		if err != nil {
 			log.Fatalf("Unable to inform frontend about main node")
@@ -208,7 +203,7 @@ func (server *Server) SetAsMain() {
 }
 
 func (server *Server) StartHeartbeat() {
-	if server.elected != server.pid {
+	if !server.isMain {
 		log.Fatalf("Unable to start heartbeat on a backup server")
 	}
 
@@ -238,37 +233,4 @@ func (server *Server) StartHeartbeat() {
 			}()
 		}
 	}()
-}
-
-func (server *Server) GetRingNeighbor() *Backup {
-	backupsByPort := make(map[uint16]*Backup)
-	var lowestPort uint16 = 0xFFFF
-	var highestPort uint16
-
-	for _, backup := range server.GetBackups() {
-		backupPort := ParsePort(backup.port)
-		backupsByPort[backupPort] = backup
-
-		if backupPort < lowestPort {
-			lowestPort = backupPort
-		}
-
-		if backupPort > highestPort {
-			highestPort = backupPort
-		}
-	}
-
-	port := ParsePort(port) + 1
-
-	if port > highestPort {
-		port = lowestPort
-	}
-
-	return backupsByPort[port]
-}
-
-func (server *Server) ConnectToRingNeighbor() {
-	conn := ConnectClient("ring node", port)
-	server.neighbor = server.GetRingNeighbor()
-	server.neighborClient = auction.NewRingServiceClient(conn)
 }

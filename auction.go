@@ -20,7 +20,7 @@ func (server *Server) SendBid(ctx context.Context, bidMsg *auction.Bid) (*auctio
 	log.Printf("Received bid from client (pid %d) with amount: %d", pid, amount)
 
 	// Send to backups if we are the main node.
-	if server.elected == server.pid {
+	if server.isMain {
 		for _, backup := range server.GetBackups() {
 			log.Printf("Sending bid to backup (pid %d, port %s)", backup.pid, backup.port)
 			_, err := backup.auctionClient.SendBid(context.Background(), bidMsg)
