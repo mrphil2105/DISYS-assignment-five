@@ -7,27 +7,13 @@ import (
 	"net"
 )
 
-type ServerConn struct {
-	pid    uint32
-	port   string
-	client auction.AuctionServiceClient
-}
-
 type Frontend struct {
 	auction.UnimplementedFrontendServiceServer
-	server *ServerConn
+	auctionClient auction.AuctionServiceClient
 }
 
 func NewFrontend() *Frontend {
 	return &Frontend{}
-}
-
-func NewServerConn(pid uint32, port string, client auction.AuctionServiceClient) *ServerConn {
-	return &ServerConn{
-		pid:    pid,
-		port:   port,
-		client: client,
-	}
 }
 
 func frontend() {
@@ -52,10 +38,12 @@ func frontend() {
 
 // Called by gRPC
 func (frontend *Frontend) SendBid(ctx context.Context, bid *auction.Bid) (*auction.BidAck, error) {
-	log.Printf("Sending bid (pid %d, amount %d) to main server", bid.GetPid(), bid.GetAmount())
+	if frontend.auctionClient == nil {
+		log.Fatalf("Unable to send bid when there is no main server set")
+	}
 
-	server := frontend.GetServer()
-	ack, err := server.client.SendBid(ctx, bid)
+	log.Printf("Sending bid (pid %d, amount %d) to main server", bid.GetPid(), bid.GetAmount())
+	ack, err := frontend.auctionClient.SendBid(ctx, bid)
 
 	if err != nil {
 		log.Fatalf("Unable to send bid to main server: %v", err)
@@ -66,10 +54,12 @@ func (frontend *Frontend) SendBid(ctx context.Context, bid *auction.Bid) (*aucti
 
 // Called by gRPC
 func (frontend *Frontend) GetResult(ctx context.Context, void *auction.Void) (*auction.Outcome, error) {
-	log.Printf("Getting result from main server")
+	if frontend.auctionClient == nil {
+		log.Fatalf("Unable to get result when there is no main server set")
+	}
 
-	server := frontend.GetServer()
-	outcome, err := server.client.GetResult(ctx, void)
+	log.Printf("Getting result from main server")
+	outcome, err := frontend.auctionClient.GetResult(ctx, void)
 
 	if err != nil {
 		log.Fatalf("Unable to get result from main server: %v", err)
@@ -85,17 +75,7 @@ func (frontend *Frontend) SetPrimaryNode(ctx context.Context, elected *auction.E
 	log.Printf("Setting main server to pid %d, port %s", pid, port)
 
 	conn := ConnectClient("server", port)
-	client := auction.NewAuctionServiceClient(conn)
-	frontend.server = NewServerConn(pid, port, client)
+	frontend.auctionClient = auction.NewAuctionServiceClient(conn)
 
 	return &auction.Void{}, nil
-}
-
-func (frontend *Frontend) GetServer() *ServerConn {
-	if server := frontend.server; server != nil {
-		return server
-	}
-
-	log.Fatalf("There is no main server set")
-	return nil
 }
