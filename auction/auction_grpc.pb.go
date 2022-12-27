@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConnectServiceClient interface {
-	FinishConnect(ctx context.Context, in *Void, opts ...grpc.CallOption) (*BackupDetails, error)
+	FinishConnect(ctx context.Context, in *PrimaryNode, opts ...grpc.CallOption) (*BackupDetails, error)
 	AddBackup(ctx context.Context, in *BackupJoin, opts ...grpc.CallOption) (*Void, error)
 	RemoveBackup(ctx context.Context, in *BackupLeave, opts ...grpc.CallOption) (*Void, error)
 }
@@ -35,7 +35,7 @@ func NewConnectServiceClient(cc grpc.ClientConnInterface) ConnectServiceClient {
 	return &connectServiceClient{cc}
 }
 
-func (c *connectServiceClient) FinishConnect(ctx context.Context, in *Void, opts ...grpc.CallOption) (*BackupDetails, error) {
+func (c *connectServiceClient) FinishConnect(ctx context.Context, in *PrimaryNode, opts ...grpc.CallOption) (*BackupDetails, error) {
 	out := new(BackupDetails)
 	err := c.cc.Invoke(ctx, "/auctionSystem.ConnectService/FinishConnect", in, out, opts...)
 	if err != nil {
@@ -66,7 +66,7 @@ func (c *connectServiceClient) RemoveBackup(ctx context.Context, in *BackupLeave
 // All implementations must embed UnimplementedConnectServiceServer
 // for forward compatibility
 type ConnectServiceServer interface {
-	FinishConnect(context.Context, *Void) (*BackupDetails, error)
+	FinishConnect(context.Context, *PrimaryNode) (*BackupDetails, error)
 	AddBackup(context.Context, *BackupJoin) (*Void, error)
 	RemoveBackup(context.Context, *BackupLeave) (*Void, error)
 	mustEmbedUnimplementedConnectServiceServer()
@@ -76,7 +76,7 @@ type ConnectServiceServer interface {
 type UnimplementedConnectServiceServer struct {
 }
 
-func (UnimplementedConnectServiceServer) FinishConnect(context.Context, *Void) (*BackupDetails, error) {
+func (UnimplementedConnectServiceServer) FinishConnect(context.Context, *PrimaryNode) (*BackupDetails, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishConnect not implemented")
 }
 func (UnimplementedConnectServiceServer) AddBackup(context.Context, *BackupJoin) (*Void, error) {
@@ -99,7 +99,7 @@ func RegisterConnectServiceServer(s grpc.ServiceRegistrar, srv ConnectServiceSer
 }
 
 func _ConnectService_FinishConnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Void)
+	in := new(PrimaryNode)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func _ConnectService_FinishConnect_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/auctionSystem.ConnectService/FinishConnect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectServiceServer).FinishConnect(ctx, req.(*Void))
+		return srv.(ConnectServiceServer).FinishConnect(ctx, req.(*PrimaryNode))
 	}
 	return interceptor(ctx, in, info, handler)
 }

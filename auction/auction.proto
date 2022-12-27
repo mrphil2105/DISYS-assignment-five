@@ -5,7 +5,7 @@ package auctionSystem;
 option go_package = "github.com/mrphil2105/DISYS-assignment-five;auction";
 
 service ConnectService {
-    rpc FinishConnect(Void) returns (BackupDetails);
+    rpc FinishConnect(PrimaryNode) returns (BackupDetails);
     rpc AddBackup(BackupJoin) returns (Void);
     rpc RemoveBackup(BackupLeave) returns (Void);
 }

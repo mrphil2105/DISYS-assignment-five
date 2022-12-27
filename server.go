@@ -147,7 +147,7 @@ func ConnectToBackup(server *Server, port string) {
 	connectClient := auction.NewConnectServiceClient(conn)
 	auctionClient := auction.NewAuctionServiceClient(conn)
 
-	details, err := connectClient.FinishConnect(context.Background(), &auction.Void{})
+	details, err := connectClient.FinishConnect(context.Background(), &auction.PrimaryNode{Pid: server.pid})
 
 	if err != nil {
 		log.Fatalf("Failed to get backup details from %s: %v", port, err)

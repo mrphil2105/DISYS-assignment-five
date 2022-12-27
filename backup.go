@@ -25,11 +25,11 @@ func NewBackup(pid uint32, port string, connectClient auction.ConnectServiceClie
 }
 
 // Called by gRPC
-func (server *Server) FinishConnect(ctx context.Context, void *auction.Void) (*auction.BackupDetails, error) {
+func (server *Server) FinishConnect(ctx context.Context, primaryNode *auction.PrimaryNode) (*auction.BackupDetails, error) {
 	log.Printf("Sending backup details (pid %d) to main node", os.Getpid())
 
-	// TODO: Remove the main server from backups (in case the main server was a backup)
-
+	// Remove the main server from backups (in case the main server was a backup)
+	server.DeleteBackup(primaryNode.GetPid())
 	server.StartPingTimer()
 
 	return &auction.BackupDetails{Pid: uint32(os.Getpid())}, nil
