@@ -22,19 +22,23 @@ type Bid struct {
 type Server struct {
 	auction.UnimplementedConnectServiceServer
 	auction.UnimplementedAuctionServiceServer
-	pid          uint32
-	bids         map[uint32]*Bid
-	auctionDone  bool
-	isMain       bool
-	backups      map[uint32]*Backup
-	backupsMutex sync.Mutex
+	pid            uint32
+	bids           map[uint32]*Bid
+	auctionDone    bool
+	isMain         bool
+	pingChan       chan interface{}
+	pingTimer      bool
+	pingTimerMutex sync.Mutex
+	backups        map[uint32]*Backup
+	backupsMutex   sync.Mutex
 }
 
 func NewServer() *Server {
 	return &Server{
-		pid:     uint32(os.Getpid()),
-		bids:    make(map[uint32]*Bid),
-		backups: make(map[uint32]*Backup),
+		pid:      uint32(os.Getpid()),
+		bids:     make(map[uint32]*Bid),
+		pingChan: make(chan interface{}, 1),
+		backups:  make(map[uint32]*Backup),
 	}
 }
 
@@ -86,6 +90,13 @@ func (server *Server) DeleteBackup(pid uint32) {
 	delete(server.backups, pid)
 }
 
+func (server *Server) ClearBackups() {
+	server.backupsMutex.Lock()
+	defer server.backupsMutex.Unlock()
+
+	server.backups = make(map[uint32]*Backup)
+}
+
 func server() {
 	listener, err := net.Listen("tcp", net.JoinHostPort("localhost", port))
 
@@ -115,7 +126,13 @@ func server() {
 
 		switch input[0] {
 		case "connect":
-			ConnectToBackup(server, input)
+			if server.GetBackupCount() > 0 && !server.isMain {
+				log.Printf("Adding a backup connection to a backup is not valid")
+				return
+			}
+
+			port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
+			ConnectToBackup(server, port)
 		case "kill":
 			os.Exit(0)
 		default:
@@ -124,13 +141,7 @@ func server() {
 	}
 }
 
-func ConnectToBackup(server *Server, input []string) {
-	if server.GetBackupCount() > 0 && !server.isMain {
-		log.Printf("Adding a backup connection to a backup is not valid")
-		return
-	}
-
-	port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
+func ConnectToBackup(server *Server, port string) {
 	conn := ConnectClient("backup node", port)
 
 	connectClient := auction.NewConnectServiceClient(conn)
@@ -144,7 +155,7 @@ func ConnectToBackup(server *Server, input []string) {
 
 	log.Printf("Informing backups about new backup (pid %d, port %s)", details.GetPid(), port)
 
-	InformExistingBackups(server, details.GetPid(), port)
+	InformBackupsAboutJoin(server, details.GetPid(), port)
 	InformNewBackup(server, connectClient)
 
 	backup := NewBackup(details.GetPid(), port, connectClient, auctionClient)
@@ -152,16 +163,27 @@ func ConnectToBackup(server *Server, input []string) {
 	server.SetBackup(backup)
 }
 
-func InformExistingBackups(server *Server, newPid uint32, newPort string) {
-	// Inform existing backups about the new backup.
-	for pid, backup := range server.GetBackups() {
+func InformBackupsAboutJoin(server *Server, pid uint32, port string) {
+	// Inform backups about the new backup.
+	for _, backup := range server.GetBackups() {
 		_, err := backup.connectClient.AddBackup(context.Background(), &auction.BackupJoin{
-			Pid:  newPid,
-			Port: newPort,
+			Pid:  pid,
+			Port: port,
 		})
 
 		if err != nil {
-			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", pid, backup.port)
+			log.Fatalf("Failed to inform backup (pid %d, port %s) about new backup", backup.pid, backup.port)
+		}
+	}
+}
+
+func InformBackupsAboutLeave(server *Server, pid uint32) {
+	// Inform backups about the backup removal.
+	for _, backup := range server.GetBackups() {
+		_, err := backup.connectClient.RemoveBackup(context.Background(), &auction.BackupLeave{Pid: pid})
+
+		if err != nil {
+			log.Fatalf("Failed to inform backup (pid %d, port %s) about removed backup", backup.pid, backup.port)
 		}
 	}
 }
@@ -199,6 +221,8 @@ func (server *Server) SetAsMain() {
 		if err != nil {
 			log.Fatalf("Unable to inform frontend about main node")
 		}
+
+		server.StartHeartbeat()
 	}
 }
 
@@ -220,17 +244,91 @@ func (server *Server) StartHeartbeat() {
 
 					if err != nil {
 						pid := backup.pid
-						port := backup.port
 
-						log.Printf("Unable to send ping to backup (pid %d, port %s): %v", pid, port, err)
-						log.Printf("Removing backup (pid %d, port %s)", pid, port)
+						log.Printf("Unable to send ping to backup (pid %d, port %s): %v", pid, backup.port, err)
+						log.Printf("Removing backup (pid %d, port %s)", pid, backup.port)
 
 						delete(server.backups, pid)
-
-						// TODO: Close connection here just to make sure.
+						go InformBackupsAboutLeave(server, pid)
 					}
 				}
 			}()
 		}
 	}()
+}
+
+func (server *Server) StartPingTimer() {
+	if server.isMain {
+		log.Fatalf("Unable to start ping timer on a main server")
+	}
+
+	shouldContinue := func() bool {
+		server.pingTimerMutex.Lock()
+		defer server.pingTimerMutex.Unlock()
+
+		if server.pingTimer {
+			return false
+		}
+
+		server.pingTimer = true
+		return true
+	}()
+
+	if !shouldContinue {
+		return
+	}
+
+	go func() {
+		for {
+			shouldStop := func() bool {
+				server.pingTimerMutex.Lock()
+				defer server.pingTimerMutex.Unlock()
+
+				return !server.pingTimer
+			}()
+
+			if shouldStop {
+				return
+			}
+
+			afterChan := time.After(3 * time.Second)
+
+			select {
+			case <-server.pingChan:
+				break
+			case <-afterChan:
+				log.Printf("No Ping message received in the last 3 seconds")
+				server.StopPingTimer()
+
+				highestPid := server.pid
+
+				for _, backup := range server.GetBackups() {
+					if backup.pid > highestPid {
+						highestPid = backup.pid
+					}
+				}
+
+				if highestPid == server.pid {
+					server.TakeOverAsMain()
+				}
+			}
+		}
+	}()
+}
+
+func (server *Server) StopPingTimer() {
+	server.pingTimerMutex.Lock()
+	defer server.pingTimerMutex.Unlock()
+
+	server.pingTimer = false
+}
+
+func (server *Server) TakeOverAsMain() {
+	log.Printf("Taking over as main node")
+	backups := server.GetBackups()
+	server.ClearBackups()
+
+	for _, backup := range backups {
+		ConnectToBackup(server, backup.port)
+	}
 }

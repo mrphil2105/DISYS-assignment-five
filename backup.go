@@ -25,8 +25,12 @@ func NewBackup(pid uint32, port string, connectClient auction.ConnectServiceClie
 }
 
 // Called by gRPC
-func (*Server) FinishConnect(ctx context.Context, void *auction.Void) (*auction.BackupDetails, error) {
+func (server *Server) FinishConnect(ctx context.Context, void *auction.Void) (*auction.BackupDetails, error) {
 	log.Printf("Sending backup details (pid %d) to main node", os.Getpid())
+
+	// TODO: Remove the main server from backups (in case the main server was a backup)
+
+	server.StartPingTimer()
 
 	return &auction.BackupDetails{Pid: uint32(os.Getpid())}, nil
 }
@@ -63,6 +67,17 @@ func (server *Server) AuctionStarted(ctx context.Context, void *auction.Void) (*
 
 	server.bids = make(map[uint32]*Bid)
 	server.auctionDone = false
+
+	return &auction.Void{}, nil
+}
+
+// Called by gRPC
+func (server *Server) Ping(ctx context.Context, void *auction.Void) (*auction.Void, error) {
+	if server.isMain {
+		log.Fatalf("Received ping message as main node")
+	}
+
+	server.pingChan <- true
 
 	return &auction.Void{}, nil
 }
