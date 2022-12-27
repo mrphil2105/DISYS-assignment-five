@@ -6,6 +6,7 @@ import (
 	"io"
 	lo "log"
 	"os"
+	"path"
 	"strconv"
 )
 
@@ -25,7 +26,8 @@ func main() {
 	port = strconv.Itoa(int(countingPort + ParsePort(*node)))
 
 	prefix := fmt.Sprintf("%-8s: ", *name)
-	logFileName := fmt.Sprintf("%s.log", *name)
+	logFileName := path.Join("logs", fmt.Sprintf("%s.log", *name))
+	os.Mkdir("logs", 0664)
 	logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 
 	if err != nil {
