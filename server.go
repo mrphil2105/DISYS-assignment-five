@@ -131,8 +131,10 @@ func server() {
 				return
 			}
 
-			port := strconv.Itoa(int(countingPort + ParsePort(input[1])))
-			ConnectToBackup(server, port)
+			for i := 1; i < len(input); i++ {
+				port := strconv.Itoa(int(countingPort + ParsePort(input[i])))
+				ConnectToBackup(server, port)
+			}
 		case "kill":
 			os.Exit(0)
 		default:

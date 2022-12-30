@@ -15,7 +15,7 @@ func ConnectClient(name string, port string) *grpc.ClientConn {
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
-		log.Fatalf("Failed to dial frontend: %v", err)
+		log.Fatalf("Failed to dial %s: %v", name, err)
 	}
 
 	return conn
